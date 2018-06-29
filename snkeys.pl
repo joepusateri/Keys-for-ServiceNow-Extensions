@@ -75,8 +75,7 @@ for(@{$s->{services}}){
   print "$_->{id} $services->{$_->{id}}\n" if($opts{debug});
 }
 
-
-# loop over PagerDuty incidents retrieved earlier, if any have an ack'd or resolved Nagios log entry, check if the problem ids match and then ack in Nagios
+# for each extension, print the IDs 
 print "service_name,service_id,escalation_policy_id,webhook_id\n";
 for(@{$e->{extensions}}){
   my($name) = $_->{name};
