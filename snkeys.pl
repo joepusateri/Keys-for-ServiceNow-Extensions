@@ -36,6 +36,7 @@ use strict;
 my(%opts);
 my(@opts)=('pagerduty_token|p=s',
            'help|h',
+           'debug'
     );
 
 die unless GetOptions(\%opts,@opts);
@@ -56,35 +57,53 @@ die "--pagerduty_token|-p required" unless($opts{pagerduty_token});
 
 # retrieve all extensions
 my($j, $cmd);
-$cmd = "curl -s -H 'Authorization: Token token=$opts{pagerduty_token}' " .
-    "'https://api.pagerduty.com/extensions?limit=100'";
-print "$cmd\n" if($opts{debug});
-$j = scalar(`$cmd`);
-my($e) = from_json($j, {allow_nonref=>1});
 
-# retrieve all services
-$cmd = "curl -s -H 'Authorization: Token token=$opts{pagerduty_token}' " .
-    "'https://api.pagerduty.com/services?limit=100'";
-print "$cmd\n" if($opts{debug});
-$j = scalar(`$cmd`);
-my($s) = from_json($j, {allow_nonref=>1});
 
+my($more_services) = 1;
 my($services) = {};
-for(@{$s->{services}}){
-  $services->{$_->{id}} = $_->{escalation_policy}{id};
-  print "$_->{id} $services->{$_->{id}}\n" if($opts{debug});
+my($offset) = 0;
+my($page) = 100;
+while ($more_services)
+{
+	# retrieve all services
+	$cmd = "curl -s -H 'Authorization: Token token=$opts{pagerduty_token}' " .
+	    "'https://api.pagerduty.com/services?limit=$page&offset=$offset'";
+	print "$cmd\n" if($opts{debug});
+	$j = scalar(`$cmd`);
+	my($s) = from_json($j, {allow_nonref=>1});
+	$more_services = $s->{more};
+	$offset = $s->{offset} + $page;
+	
+	for(@{$s->{services}}){
+	  $services->{$_->{id}} = $_->{escalation_policy}{id};
+	  print "$_->{id} $services->{$_->{id}}\n" if($opts{debug});
+	}
 }
 
 # for each extension, print the IDs 
 print "service_name,service_id,escalation_policy_id,webhook_id\n";
-for(@{$e->{extensions}}){
-  my($name) = $_->{name};
-  my($snow_user) = $_->{config}{snow_user};
-  if ($snow_user)
-  {
-    my($serviceid) = $_->{extension_objects}[0]{id};
-    my($servicename) = $_->{extension_objects}[0]{summary};
-    my($webhookid) = $_->{id};
-    print "\"$servicename\",$serviceid,$services->{$serviceid},$webhookid\n";
-  }
+$more_services = 1;
+$offset = 0;
+
+while ($more_services)
+{
+	$cmd = "curl -s -H 'Authorization: Token token=$opts{pagerduty_token}' " .
+	    "'https://api.pagerduty.com/extensions?limit=$page&offset=$offset'";
+	print "$cmd\n" if($opts{debug});
+	$j = scalar(`$cmd`);
+	my($e) = from_json($j, {allow_nonref=>1});
+	$more_services = $e->{more};
+	$offset = $e->{offset} + $page;
+	
+	for(@{$e->{extensions}}){
+	  my($name) = $_->{name};
+	  my($snow_user) = $_->{config}{snow_user};
+	  if ($snow_user)
+	  {
+	    my($serviceid) = $_->{extension_objects}[0]{id};
+	    my($servicename) = $_->{extension_objects}[0]{summary};
+	    my($webhookid) = $_->{id};
+	    print "\"$servicename\",$serviceid,$services->{$serviceid},$webhookid\n";
+	  }
+	}
 }
