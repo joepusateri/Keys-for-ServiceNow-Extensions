@@ -22,6 +22,16 @@ It works only with PagerDuty's V2 API token
 
     ./snkeys.pl -p <V2 API token>
 
+# snkeys.py
+
+This is a Python 3 version of the above in Perl
+
+1. Create a virtual environment with Python 3: python3 -m venv venv
+1. Activate the virtual environment: . venv/bin/activate
+1. pip3 install -r requirements.txt
+1. python3 snkeys.py -p <V2 API token>
+
+
 # snkeys.js
 
 ## Using JavaScript Version
